@@ -1,13 +1,15 @@
- 
-import './App.css';
-import Comments from './comments/Comments';
-function App() {
+import Comments from "./comments/Comments";
+
+const App = () => {
   return (
-    <div className="App"> 
-          Learn React 
-          <Comments currentUserId='1' />
+    <div>
+      <h1>Hello monsterlessons</h1>
+      <Comments
+        commentsUrl="http://localhost:3004/comments"
+        currentUserId="1"
+      />
     </div>
   );
-}
+};
 
 export default App;

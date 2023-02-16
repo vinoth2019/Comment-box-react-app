@@ -1,47 +1,84 @@
 import { useState, useEffect } from "react";
-import { getComments as getCommentsApi, createComment as createCommentApi, deleteComment as deleteCommentApi } from '../API';
-import Comment from "./Comment";
 import CommentForm from "./CommentForm";
-import '../index.css';
+import Comment from "./Comment";
+import {
+  getComments as getCommentsApi,
+  createComment as createCommentApi,
+  updateComment as updateCommentApi,
+  deleteComment as deleteCommentApi,
+} from "../api";
 
+const Comments = ({ commentsUrl, currentUserId }) => {
+  const [backendComments, setBackendComments] = useState([]);
+  const [activeComment, setActiveComment] = useState(null);
+  const rootComments = backendComments.filter(
+    (backendComment) => backendComment.parentId === null
+  );
+  const getReplies = (commentId) =>
+    backendComments
+      .filter((backendComment) => backendComment.parentId === commentId)
+      .sort(
+        (a, b) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+  const addComment = (text, parentId) => {
+    createCommentApi(text, parentId).then((comment) => {
+      setBackendComments([comment, ...backendComments]);
+      setActiveComment(null);
+    });
+  };
 
-const Comments = ({ currentUserId }) =>{
-    const [backendcomments, setBackendComments] = useState([]);
-    console.log('backend', backendcomments);
-    const rootComments = backendcomments.filter((backendcomment) => backendcomment.parentId === null);
-    const getReplies = (commentId) => {
-        return backendcomments.filter((backendcomment) => backendcomment.parentId === commentId).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-    } 
-    const addComment = (text, parentId) => {
-        createCommentApi(text, parentId).then(comment => setBackendComments([comment, ...backendcomments]));
+  const updateComment = (text, commentId) => {
+    updateCommentApi(text).then(() => {
+      const updatedBackendComments = backendComments.map((backendComment) => {
+        if (backendComment.id === commentId) {
+          return { ...backendComment, body: text };
+        }
+        return backendComment;
+      });
+      setBackendComments(updatedBackendComments);
+      setActiveComment(null);
+    });
+  };
+  const deleteComment = (commentId) => {
+    if (window.confirm("Are you sure you want to remove comment?")) {
+      deleteCommentApi().then(() => {
+        const updatedBackendComments = backendComments.filter(
+          (backendComment) => backendComment.id !== commentId
+        );
+        setBackendComments(updatedBackendComments);
+      });
     }
-    const deletecomment = (commentId) => {
-        if(window.confirm('Are you sure want to remove the comment?'))
-        deleteCommentApi(commentId).then(() =>{
-            const updatedBackendComments = backendcomments.filter((backendcomment) => backendcomment.id !== commentId);
-            setBackendComments(updatedBackendComments);
-        })
-    }
-    
-    useEffect(()=>{
-        getCommentsApi().then((data)=> {
-            setBackendComments(data);
-        })
-    }, []);
+  };
 
-    return<div className="comments">
-        <h3 className="comments-title">Comments</h3>
-        <div className="comment-form-title">Write Comments</div>
-        <CommentForm submitLable="write" handleSubmit={addComment} />
-        <div className="comments-container">
-             {rootComments.map((rootComment) => (
-                 
-                    <Comment key={rootComment.id} comment={rootComment} replies = {getReplies(rootComment.id)} currentUserId={currentUserId} deletecomment={deletecomment}/>
-                
-             ))}
-        </div>
-        
+  useEffect(() => {
+    getCommentsApi().then((data) => {
+      setBackendComments(data);
+    });
+  }, []);
+
+  return (
+    <div className="comments">
+      <h3 className="comments-title">Comments</h3>
+      <div className="comment-form-title">Write comment</div>
+      <CommentForm submitLabel="Write" handleSubmit={addComment} />
+      <div className="comments-container">
+        {rootComments.map((rootComment) => (
+          <Comment
+            key={rootComment.id}
+            comment={rootComment}
+            replies={getReplies(rootComment.id)}
+            activeComment={activeComment}
+            setActiveComment={setActiveComment}
+            addComment={addComment}
+            deleteComment={deleteComment}
+            updateComment={updateComment}
+            currentUserId={currentUserId}
+          />
+        ))}
+      </div>
     </div>
-}
+  );
+};
 
 export default Comments;
